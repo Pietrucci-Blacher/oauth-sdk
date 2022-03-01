@@ -1,2 +1,2 @@
-{"name":null,"url":null,"redirect_uri":null,"client_id":"621e3b676204d","client_secret":"621e3b676204f"}
 {"name":"MonApp","url":"http:\/\/localhost:8080","redirect_uri":"http:\/\/localhost:8080\/callback","client_id":"621e3b8d1f964","client_secret":"621e3b8d1f966"}
+{"name":"MonApp2","url":"http:\/\/localhost:8080","redirect_uri":"http:\/\/localhost:8080\/callback","client_id":"621e3c7eaac68","client_secret":"621e3c7eaac6a"}

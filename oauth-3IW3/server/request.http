@@ -1,4 +1,7 @@
 POST http://localhost:8080/register
 Content-Type: application/x-www-form-urlencoded
 
-name=MonApp&url=http://localhost:8080&redirect_uri=http://localhost:8080/callback
+name=MonApp2&url=http://localhost:8080&redirect_uri=http://localhost:8080/callback
+
+###
+GET http://localhost:8080/auth?response_type=code&client_id=621e3b8d1f964&redirect_uri=http://localhost:8080/callback&scope=read&state=xyz

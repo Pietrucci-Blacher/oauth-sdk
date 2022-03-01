@@ -3,7 +3,7 @@
 function readDatabase($filename) {
     $data = file($filename);
 
-    return array_map(fn ($line) => json_decode($line), $data);
+    return array_map(fn ($line) => json_decode($line, true), $data);
 }
 
 function writeDatabase($filename, $data) {
@@ -21,16 +21,19 @@ function insertData($filename, $data) {
     writeDatabase($filename, $database);
 }
 
+function findBy($filename, $criteria) {
+    $database = readDatabase($filename);
+
+    $result = array_filter(
+        $database, 
+        fn($app) => count(array_intersect_assoc($app, $criteria)) === count($criteria)
+    );
+
+    return $result[0] ?? null;
+}
+
 function findAppByName($name) {
-    $apps = readDatabase('./data/apps.db');
-
-    foreach ($apps as $app) {
-        if ($app->name === $name) {
-            return $app;
-        }
-    }
-
-    return null;
+    return findBy('./data/apps.db', ['name' => $name]);
 }
 
 
@@ -49,7 +52,20 @@ function register() {
 }
 
 function auth() {
-    echo "auth";
+    ['client_id' => $clientId, 'scope'=> $scope, 'state' => $state, 'redirect_uri' => $redirect_uri] = $_GET;
+    $app = findBy(
+        "./data/apps.db",
+        ['client_id'=> $clientId, 'redirect_uri' => $redirect_uri]
+    );
+    if(!$app) {
+        http_response_code(404);
+        return;
+    }
+    echo "Name: {$app['name']}<br>";
+    echo "Scope: {$scope}<br>";
+    echo "URL: {$app['url']}<br>";
+    echo "<a href='/auth-success?client_id={$app['client_id']}&state={$state}'>Oui</a>&nbsp;";
+    echo "<a href='/failed'>Non</a>";
 }
 
 
