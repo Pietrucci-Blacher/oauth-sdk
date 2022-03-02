@@ -21,9 +21,11 @@ function insert($filename, $line) {
 
 function findBy($filename, $criteria) {
     $data = readDatabase($filename);
-    $result = array_filter(
-        $data,
-        fn ($line) => count(array_intersect_assoc($line, $criteria)) == count($criteria)
+    $result = array_values(
+        array_filter(
+            $data,
+            fn ($line) => count(array_intersect_assoc($line, $criteria)) == count($criteria)
+        )
     );
     return count($result) > 0 ? $result[0] : null;
 }
