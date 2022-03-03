@@ -50,6 +50,9 @@ function findAppBy($criteria) {
 function findCodeBy($criteria) {
     return findBy('./data/codes.db', $criteria);
 }
+function findTokenBy($criteria) {
+    return findBy('./data/tokens.db', $criteria);
+}
 
 
 function register() {
@@ -72,6 +75,9 @@ function auth() {
     if(!$app) {
         http_response_code(404);
         return;
+    }
+    if (findTokenBy(['client_id' => $clientId])) {
+        return authSuccess();
     }
     echo "Name: {$app['name']}<br>";
     echo "Scope: {$scope}<br>";
@@ -114,7 +120,7 @@ function token() {
     }
     $token = [
         "access_token" => bin2hex(random_bytes(16)),
-        "expiresAt" => time() + (60*5),
+        "expiresAt" => time() + (60*60*24*30),
         "client_id" => $clientId,
         "user_id"=> bin2hex(random_bytes(16)),
         "code" => $code['code'],
@@ -124,6 +130,35 @@ function token() {
     echo json_encode([
         "access_token" => $token['access_token'], 
         "expires_in" => $token['expiresAt']
+    ]);
+}
+
+function me() {
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+    list($type, $token) = explode(' ', $authHeader);
+    if($type !== 'Bearer') {
+        http_response_code(401);
+        return;
+    }
+    $token = findTokenBy(['access_token' => $token]);
+    if(!$token) {
+        http_response_code(401);
+        return;
+    }
+    if($token['expiresAt'] < time()) {
+        http_response_code(400);
+        return;
+    }
+    $code = findCodeBy(['code' => $token['code']]);
+    if(!$code) {
+        http_response_code(401);
+        return;
+    }
+    echo json_encode([
+        "user_id" => $token['user_id'],
+        "lastname" => 'Doe',
+        "firstname" => 'John',
     ]);
 }
 
@@ -140,6 +175,9 @@ switch(strtok($route, "?")) {
         authSuccess();
     case '/token':
         token();
+        break;
+    case '/me':
+        me();
         break;
     default:
         echo '404';
