@@ -21,42 +21,54 @@ function insertData($filename, $data) {
     writeDatabase($filename, $database);
 }
 
+function insertApp($app) {
+    insertData('./data/apps.db', $app);
+}
+
+function insertCode($code) {
+    insertData('./data/codes.db', $code);
+}
+function insertToken($token) {
+    insertData('./data/tokens.db', $token);
+}
+
 function findBy($filename, $criteria) {
     $database = readDatabase($filename);
 
-    $result = array_filter(
+    $result = array_values(array_filter(
         $database, 
         fn($app) => count(array_intersect_assoc($app, $criteria)) === count($criteria)
-    );
+    ));
 
     return $result[0] ?? null;
 }
 
-function findAppByName($name) {
-    return findBy('./data/apps.db', ['name' => $name]);
+function findAppBy($criteria) {
+    return findBy('./data/apps.db', $criteria);
+}
+
+function findCodeBy($criteria) {
+    return findBy('./data/codes.db', $criteria);
 }
 
 
 function register() {
     ['name' => $name, 'url' => $url, 'redirect_uri' => $redirectUri] = $_POST;
-    if (findAppByName($name)) {
+    if (findAppBy(['name'=> $name])) {
         http_response_code(409);
         return;
     }
     $app = array_merge(
         ['name' => $name, 'url' => $url, 'redirect_uri' => $redirectUri],
         ['client_id' => uniqid(), 'client_secret' => uniqid()]);
-    insertData('./data/apps.db', $app);
+    insertApp('./data/apps.db', $app);
     http_response_code(201);
     echo json_encode($app);
 }
 
 function auth() {
     ['client_id' => $clientId, 'scope'=> $scope, 'state' => $state, 'redirect_uri' => $redirect_uri] = $_GET;
-    $app = findBy(
-        "./data/apps.db",
-        ['client_id'=> $clientId, 'redirect_uri' => $redirect_uri]
-    );
+    $app = findAppBy(['client_id'=> $clientId, 'redirect_uri' => $redirect_uri]);
     if(!$app) {
         http_response_code(404);
         return;
@@ -68,6 +80,53 @@ function auth() {
     echo "<a href='/failed'>Non</a>";
 }
 
+function authSuccess() {
+    ['client_id' => $clientId, 'state' => $state] = $_GET;
+    $app = findAppBy(['client_id'=> $clientId]);
+    if(!$app) {
+        http_response_code(404);
+        return;
+    }
+    $code = [
+        "code" => bin2hex(random_bytes(16)),
+        "client_id" => $clientId,
+        "expiresAt" => time() + (60*5),
+    ];
+    insertCode($code);
+    header("Location: ${app['redirect_uri']}?state=${state}&code=${code['code']}");
+}
+
+function token() {
+    ['client_id' => $clientId, 'client_secret' => $clientSecret, 'code' => $code, 'grant_type' => $grantType, 'redirect_uri' => $redirect] = $_GET;
+    $app = findAppBy(['client_id'=> $clientId, 'client_secret' => $clientSecret, 'redirect_uri' => $redirect]);
+    if(!$app) {
+        http_response_code(401);
+        return;
+    }
+    $code = findCodeBy(['code' => $code, 'client_id'=> $clientId]);
+    if(!$code) {
+        http_response_code(404);
+        return;
+    }
+    if($code['expiresAt'] < time()) {
+        http_response_code(400);
+        return;
+    }
+    $token = [
+        "access_token" => bin2hex(random_bytes(16)),
+        "expiresAt" => time() + (60*5),
+        "client_id" => $clientId,
+        "user_id"=> bin2hex(random_bytes(16)),
+        "code" => $code['code'],
+    ];
+    insertToken($token);
+    http_response_code(201);
+    echo json_encode([
+        "access_token" => $token['access_token'], 
+        "expires_in" => $token['expiresAt']
+    ]);
+}
+
 
 $route = $_SERVER['REQUEST_URI'];
 switch(strtok($route, "?")) {
@@ -76,6 +135,11 @@ switch(strtok($route, "?")) {
         break;
     case '/auth':
         auth();
+        break;
+    case '/auth-success':
+        authSuccess();
+    case '/token':
+        token();
         break;
     default:
         echo '404';

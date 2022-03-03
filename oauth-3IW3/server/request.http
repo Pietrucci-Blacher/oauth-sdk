@@ -3,5 +3,21 @@ Content-Type: application/x-www-form-urlencoded
 
 name=MonApp2&url=http://localhost:8080&redirect_uri=http://localhost:8080/callback
 
-###
-GET http://localhost:8080/auth?response_type=code&client_id=621e3b8d1f964&redirect_uri=http://localhost:8080/callback&scope=read&state=xyz
+
+#######################################
+##        Authorization_code         ##
+#######################################
+### Lien vers modal d'approbation
+GET http://localhost:8080/auth?response_type=code&client_id=621e3b8d1f964&redirect_uri=http://localhost:8081/callback&scope=read&state=xyz
+
+### Retour de modal => resultat redirige vers redirect_uri
+GET http://localhost:8080/auth-success?client_id=621e3b8d1f964&state=xyz
+
+### Exchange code with token
+GET http://localhost:8080/token?client_id=621e3b8d1f964&client_secret=621e3b8d1f966&code=3106698fda1ea757935355306ae9a7e1&grant_type=authorization_code&redirect_uri=http://localhost:8081/callback
+
+#######################################
+##         Get User Profile          ##
+#######################################
+GET http://localhost:8080/me
+Authorization: Bearer 46a9610e6003d652a25e3b60e442ffa9
