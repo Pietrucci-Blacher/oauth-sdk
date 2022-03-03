@@ -5,3 +5,13 @@ name=MonApp&url=http://localhost:8081&redirect_success=http://localhost:8081/cal
 
 ### href behind "Login With" button
 GET http://localhost:8080/auth?state=yes&client_id=621f59c71bc35&scope=public_profile&redirect_uri=http://localhost:8081/callback&response_type=code
+
+### exchange code for token
+POST http://localhost:8080/token
+Content-Type: application/x-www-form-urlencoded
+
+code=751c5965067183e5f89dbb3a21e3e169&redirect_uri=http://localhost:8081/callback&grant_type=authorization_code&client_id=621f59c71bc35&client_secret=621f59c71bc36
+
+###
+GET http://localhost:8080/me
+Authorization: Bearer 1e2bd51fa2d69b0d9b9f7219e2fe8272

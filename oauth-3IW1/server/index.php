@@ -34,6 +34,9 @@ function findAppBy($criteria) {
     return findBy("./data/apps.db", $criteria);
 }
 
+function findCodeBy($criteria) {
+    return findBy("./data/codes.db", $criteria);
+}
 function findAppByName($name) {
     return findAppBy(['name' => $name]);
 }
@@ -42,6 +45,9 @@ function insertApp($app) {
 }
 function insertCode($code) {
     insert('./data/codes.db', $code);
+}
+function insertToken($token) {
+    insert('./data/tokens.db', $token);
 }
 
 function register() {
@@ -93,7 +99,62 @@ function authSuccess() {
 }
 
 function token() {
-    
+    $input = $_SERVER['REQUEST_METHOD'] === "POST" ? $_POST : $_GET;
+
+    ['code' => $code, 'redirect_uri' => $redirect, 'client_id'=> $clientId, 'client_secret' => $clientSecret, 'grant_type' => $grantType] = $input;
+
+    $app = findAppBy([
+        "client_id" => $clientId, "client_secret" => $clientSecret, 'redirect_success' => $redirect
+    ]);
+    if (!$app) {
+        http_response_code(404);
+        return;
+    }
+
+    $code = findCodeBy(["code"=> $code, 'client_id' => $clientId]);
+    if(!$code) {
+        http_response_code(404);
+        return;
+    }
+    if ($code['expires_at'] < time()) {
+        http_response_code(400);
+        return;
+    }
+    $token = [
+        'token' => bin2hex(random_bytes(16)),
+        'expires_at' => time() + (60*60*24*30),
+        'user_id' => $code['user_id'],
+        'client_id' => $code['client_id'],
+        'code' => $code['code']
+    ];
+    insertToken($token);
+    http_response_code(201);
+    echo json_encode(["access_token" => $token['token'], 'expire_in' => $token['expires_at']]);
+}
+
+function me() {
+    $headers = getallheaders();
+    $auth = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+    [$type, $token] = explode(" ", $auth);
+    if ($type !== "Bearer") {
+        http_response_code(401);
+        return;
+    }
+    $token = findTokenBy(["token" => $token]);
+    if (!$token || $token['expires_at'] < time()) {
+        http_response_code(401);
+        return;
+    }
+    $code = findCodeBy(["code" => $token['code']]);
+    if (!$code) {
+        http_response_code(401);
+        return;
+    }
+    echo json_encode([
+        'user_id' => $token['user_id'],
+        'lastname' => 'Doe',
+        'firstname' => 'John'
+    ]);
 }
 
 $route = $_SERVER["REQUEST_URI"];
@@ -109,6 +170,9 @@ switch(strtok($route, "?")) {
         break;
     case '/token':
         token();
+    case '/me':
+        me();
+        break;
     default:
         http_response_code(404);
         break;
