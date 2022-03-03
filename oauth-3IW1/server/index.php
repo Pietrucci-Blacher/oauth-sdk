@@ -30,11 +30,18 @@ function findBy($filename, $criteria) {
     return count($result) > 0 ? $result[0] : null;
 }
 
+function findAppBy($criteria) {
+    return findBy("./data/apps.db", $criteria);
+}
+
 function findAppByName($name) {
-    return findBy('./data/apps.db', ['name' => $name]);
+    return findAppBy(['name' => $name]);
 }
 function insertApp($app) {
     insert('./data/apps.db', $app);
+}
+function insertCode($code) {
+    insert('./data/codes.db', $code);
 }
 
 function register() {
@@ -47,11 +54,46 @@ function register() {
         'name' => $name,
         'url' => $url,
         'redirect_success' => $redirect,
-        "client_id" => uniqid(), 'client_secret' => uniqid()
+        "client_id" => bin2hex(random_bytes(16)), 'client_secret' => bin2hex(random_bytes(16))
     ];
     insertApp($app);
     http_response_code(201);
     echo json_encode($app);
+}
+
+function auth() {
+    ['client_id'=> $clientId, 'scope' => $scope, 'redirect_uri' => $redirect, 'state' => $state] = $_GET;
+    $app = findAppBy(["client_id" => $clientId, 'redirect_success' => $redirect]);
+    if (!$app) {
+        http_response_code(404);
+        return;
+    }
+    echo "Name: $app[name]<br>";
+    echo "Scope: $scope<br>";
+    echo "Url: $app[url]<br>";
+    echo "<a href='/auth-success?state=$state&client_id=$clientId'>Oui</a>&nbsp;";
+    echo "<a href='/failed'>Non</a>";
+}
+
+function authSuccess() {
+    ['state' => $state, 'client_id' => $clientId] = $_GET;
+    $app = findAppBy(["client_id" => $clientId]);
+    if (!$app) {
+        http_response_code(404);
+        return;
+    }
+    $code = [
+        "code" => bin2hex(random_bytes(16)),
+        "client_id" => $clientId,
+        "user_id" => bin2hex(random_bytes(16)),
+        "expires_at" => time() + 3600,
+    ];
+    insertCode($code);
+    header("Location: $app[redirect_success]?code=$code[code]&state=$state");
+}
+
+function token() {
+    
 }
 
 $route = $_SERVER["REQUEST_URI"];
@@ -62,6 +104,11 @@ switch(strtok($route, "?")) {
     case '/auth':
         auth();
         break;
+    case '/auth-success':
+        authSuccess();
+        break;
+    case '/token':
+        token();
     default:
         http_response_code(404);
         break;
