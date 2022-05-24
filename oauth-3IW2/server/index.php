@@ -1,62 +1,73 @@
 <?php
 
-function readDatabase($filename) {
+function readDatabase($filename)
+{
     return array_map(
-        fn ($line) => json_decode($line, true), 
+        fn ($line) => json_decode($line, true),
         file($filename)
     );
 }
 
-function writeDatabase($filename, $data) {
+function writeDatabase($filename, $data)
+{
     file_put_contents(
-        $filename, 
+        $filename,
         implode(
-            "\n", 
+            "\n",
             array_map(
-                fn ($line) => json_encode($line), 
+                fn ($line) => json_encode($line),
                 $data
             )
         )
     );
 }
 
-function findBy($filename, $criteria) {
+function findBy($filename, $criteria)
+{
     $data = readDatabase($filename);
     $result = array_values(array_filter(
-        $data, 
+        $data,
         fn ($line) => count(array_intersect_assoc($line, $criteria)) == count($criteria)
     ));
 
     return $result[0] ?? null;
 }
 
-function findAppBy($criteria) {
+function findAppBy($criteria)
+{
     return findBy('./data/apps.db', $criteria);
 }
-function findCodeBy($criteria) {
+function findCodeBy($criteria)
+{
     return findBy('./data/codes.db', $criteria);
 }
-function findTokenBy($criteria) {
+function findTokenBy($criteria)
+{
     return findBy('./data/tokens.db', $criteria);
 }
 
-function insertRow($filename, $row) {
+function insertRow($filename, $row)
+{
     $data = readDatabase($filename);
     $data[] = $row;
     writeDatabase($filename, $data);
 }
 
-function insertApp($app) {
+function insertApp($app)
+{
     insertRow('./data/apps.db', $app);
 }
-function insertCode($code) {
+function insertCode($code)
+{
     insertRow('./data/codes.db', $code);
 }
-function insertToken($token) {
+function insertToken($token)
+{
     insertRow('./data/tokens.db', $token);
 }
 
-function register() {
+function register()
+{
     ['name' => $name, 'url'=> $url, 'redirect_success' => $redirect] = $_POST;
     if (findAppBy(['name' => $name])) {
         http_response_code(409);
@@ -74,14 +85,15 @@ function register() {
     echo json_encode($app);
 }
 
-function auth() {
+function auth()
+{
     ['client_id' => $clientId, 'state' => $state, 'redirect_uri' => $redirect, 'scope' => $scope] = $_GET;
     $app = findAppBy(['client_id' => $clientId, 'redirect_success' => $redirect]);
     if (is_null($app)) {
         http_response_code(404);
         return;
     }
-    if(findTokenBy(['client_id' => $clientId])) {
+    if (findTokenBy(['client_id' => $clientId])) {
         return authSuccess();
     }
     echo "App: $app[name]<br>";
@@ -91,7 +103,8 @@ function auth() {
     echo "<a href='/auth-failed'>Non</a>";
 }
 
-function authSuccess() {
+function authSuccess()
+{
     ['client_id' => $clientId, 'state'=> $state, 'scope' => $scope] = $_GET;
     $app = findAppBy(['client_id' => $clientId]);
     $redirect = $app['redirect_success'];
@@ -106,7 +119,8 @@ function authSuccess() {
     header("Location: $redirect?code=$code[code]&state=$state");
 }
 
-function token() {
+function token()
+{
     ['code' => $code, 'grant_type'=> $grantType, 'redirect_uri' => $redirect, 'client_id' => $clientId, 'client_secret' => $clientSecret] = $_GET;
     $app = findAppBy(['client_id' => $clientId, 'client_secret' => $clientSecret, 'redirect_success' => $redirect]);
     if (!$app) {
@@ -137,7 +151,8 @@ function token() {
     ]);
 }
 
-function me() {
+function me()
+{
     $headers = getallheaders();
     $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
     if (!$authHeader) {
@@ -170,7 +185,7 @@ function me() {
 }
 
 $route = $_SERVER["REQUEST_URI"];
-switch(strtok($route, "?")) {
+switch (strtok($route, "?")) {
     case '/register':
         register();
         break;
