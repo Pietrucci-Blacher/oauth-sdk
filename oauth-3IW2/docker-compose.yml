@@ -1,9 +1,18 @@
 services:
-    server:
-      image: php:alpine
-      working_dir: /var/www/html
-      volumes:
-        - ./server:/var/www/html
-      ports:
-        - "127.0.0.1:8080:8080"
-      command: ["php", "-S", "0.0.0.0:8080"]
+  server:
+    image: php:alpine
+    working_dir: /var/www/html
+    volumes:
+      - ./server:/var/www/html
+    ports:
+      - "127.0.0.1:8080:8080"
+    command: [ "php", "-S", "0.0.0.0:8080" ]
+
+  client:
+    image: php:alpine
+    working_dir: /var/www/html
+    volumes:
+      - ./client:/var/www/html
+    ports:
+      - "127.0.0.1:8081:8080"
+    command: [ "php", "-S", "0.0.0.0:8080" ]
