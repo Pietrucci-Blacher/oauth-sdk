@@ -10,23 +10,51 @@ function login()
         "state"=>bin2hex(random_bytes(16)),
         "client_id"=> CLIENT_ID,
         "scope"=>"profile",
+        "response_type"=>"code",
         "redirect_uri"=>"http://localhost:8081/oauth_success",
     ]);
+    echo "
+        <form method=\"POST\" action=\"/oauth_success\">
+            <input type=\"text\" name=\"username\"/>
+            <input type=\"password\" name=\"password\"/>
+            <input type=\"submit\" value=\"Login\"/>
+        </form>
+    ";
+    $fbQueryParams = http_build_query([
+        "state"=>bin2hex(random_bytes(16)),
+        "client_id"=> FB_CLIENT_ID,
+        "scope"=>"basic",
+        "redirect_uri"=>"http://localhost:8081/fb_oauth_success",
+    ]);
     echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with Oauth-Server</a>";
+    echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?{$fbQueryParams}\">Login with Facebook</a>";
 }
 
 // get token from code then get user info
 function callback()
 {
-    $code = $_GET['code'];
-    $state = $_GET['state'];
-    $queryParams = http_build_query([
-        "grant_type"=>"authorization_code",
-        "code"=>$code,
-        "redirect_uri"=>"http://localhost:8081/oauth_success",
-        "client_id"=>CLIENT_ID,
-        "client_secret"=>CLIENT_SECRET,
-    ]);
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+        ["username"=> $username, "password" => $password] = $_POST;
+        $specifParams = [
+            "grant_type" => "password",
+            "username" => $username,
+            "password" => $password,
+       ];
+    } else {
+        ["code"=> $code, "state" => $state] = $_GET;
+        $specifParams = [
+            "grant_type" => "authorization_code",
+            "code" => $code
+        ];
+    }
+    $queryParams = http_build_query(array_merge(
+        $specifParams,
+        [
+            "redirect_uri" => "http://localhost:8081/oauth_success",
+            "client_id" => CLIENT_ID,
+            "client_secret" => CLIENT_SECRET,
+        ]
+    ));
     $response = file_get_contents("http://server:8080/token?{$queryParams}");
     if (!$response) {
         echo $http_response_header;
