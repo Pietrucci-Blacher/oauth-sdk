@@ -1,11 +1,13 @@
 <?php
 
-define("CLIENT_ID", '67dc2be521bec2ff862d3ab057de216b');
-define("FB_CLIENT_ID", '1311135729390173');
-define("CLIENT_SECRET", '04054cf433eeb3976252c81b6d657fda');
-define("FB_CLIENT_SECRET", 'fc5e25661fe961ab85d130779357541e');
-define("TW_CLIENT_ID","8d6nrpekzhujyc74kcc5nkdwec08q7");
-define("TW_CLIENT_SECRET","ngjn0s9tt26vqtbeicjm094g2l6v5x");
+const CLIENT_ID = '67dc2be521bec2ff862d3ab057de216b';
+const FB_CLIENT_ID = '1311135729390173';
+const CLIENT_SECRET = '04054cf433eeb3976252c81b6d657fda';
+const FB_CLIENT_SECRET = 'fc5e25661fe961ab85d130779357541e';
+const TW_CLIENT_ID = "s77c4qdvjygkwni85rsdj1k48nsy7l";
+const TW_CLIENT_SECRET = "ip29jvmwtmgsfls18l245tn9a73l3o";
+const DISCORD_CLIENT_ID = "980825470713069598";
+const DISCORD_CLIENT_SECRET = "HUkrGaLwXoqVuWf_9UwET__a73WYLoIj";
 
 // Create a login page with a link to oauth
 function login()
@@ -38,10 +40,16 @@ function login()
         "response_type" => "token",
         "state"=>bin2hex(random_bytes(16))
     ]);
+    $discordQueryParams = http_build_query([
+        "client_id" => DISCORD_CLIENT_ID,
+        "scope"=>"email",
+        "response_type" => "token",
+        "redirect_uri"=> "https://localhost/discord_oauth_success"
+    ]);
     echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with Oauth-Server</a><br>";
     echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?{$fbQueryParams}\">Login with Facebook</a><br>";
     echo "<a href=\"https://id.twitch.tv/oauth2/authorize?{$twQueryParams}\">Login with Twitch</a><br>";
-    echo "<a href=\"#\">Login with Discord</a>";
+    echo "<a href=\"https://discord.com/api/oauth2/authorize?{$discordQueryParams}\">Login with Discord</a>";
 }
 
 // get token from code then get user info
@@ -119,10 +127,16 @@ function getFbUser($token)
     return json_decode($response, true);
 }
 
-function twcallback():void
+function twCallback():void
 {
 
 }
+
+function discordCallback()
+{
+
+}
+
 
 function getToken($baseUrl, $clientId, $clientSecret)
 {
@@ -149,6 +163,7 @@ function getToken($baseUrl, $clientId, $clientSecret)
 $route = $_SERVER["REQUEST_URI"];
 
 
+
 switch (strtok($route, "?")) {
     case '/login':
         login();
@@ -161,6 +176,9 @@ switch (strtok($route, "?")) {
         break;
     case '/twitch_oauth_success':
         twcallback();
+        break;
+    case '/discord_oauth_success':
+        discordcallback();
         break;
     default:
         http_response_code(404);
