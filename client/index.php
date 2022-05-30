@@ -1,9 +1,9 @@
 <?php
 
 const CLIENT_ID = '67dc2be521bec2ff862d3ab057de216b';
-const FB_CLIENT_ID = '1311135729390173';
-const CLIENT_SECRET = '04054cf433eeb3976252c81b6d657fda';
-const FB_CLIENT_SECRET = 'fc5e25661fe961ab85d130779357541e';
+const CLIENT_SECRET = 'cf519bc17340aa347774be36443cdbf1';
+const FB_CLIENT_ID = '651128429478820';
+const FB_CLIENT_SECRET = '02f2ab1a9c018c523282015c3cb2a468';
 const TW_CLIENT_ID = "s77c4qdvjygkwni85rsdj1k48nsy7l";
 const TW_CLIENT_SECRET = "ip29jvmwtmgsfls18l245tn9a73l3o";
 const DISCORD_CLIENT_ID = "980825470713069598";
@@ -101,7 +101,7 @@ function callback()
 // Facebook oauth: exchange code with token then get user info
 function fbcallback()
 {
-    $token = getToken("https://graph.facebook.com/v13.0/oauth/access_token", FB_CLIENT_ID, FB_CLIENT_SECRET);
+    $token = getToken("https://graph.facebook.com/v13.0/oauth/access_token", FB_CLIENT_ID, FB_CLIENT_SECRET, "https://localhost/fb_oauth_success", "authorization_code");
     $user = getFbUser($token);
     $unifiedUser = (fn () => [
         "id" => $user["id"],
@@ -129,24 +129,26 @@ function getFbUser($token)
 
 function twCallback():void
 {
-
+    $token = getToken("https://id.twitch.tv/oauth2/token", TW_CLIENT_ID, TW_CLIENT_SECRET, "https://localhost/twitch_oauth_success");
+    var_dump($token);
 }
 
-function discordCallback()
+function discordCallback(): void
 {
-
+    $token = getToken("https://discord.com/api/oauth2/token", DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, "https://localhost/discord_oauth_success");
+    var_dump($token);
 }
 
 
-function getToken($baseUrl, $clientId, $clientSecret)
+function getToken($baseUrl, $clientId, $clientSecret, $redirect_uri)
 {
     ["code"=> $code, "state" => $state] = $_GET;
     $queryParams = http_build_query([
         "client_id"=> $clientId,
         "client_secret"=> $clientSecret,
-        "redirect_uri"=>"https://localhost/fb_oauth_success",
+        "redirect_uri"=> $redirect_uri,
         "code"=> $code,
-        "grant_type"=>"authorization_code",
+        "grant_type"=>"authorization_code"
     ]);
 
     $url = $baseUrl . "?{$queryParams}";
@@ -162,8 +164,6 @@ function getToken($baseUrl, $clientId, $clientSecret)
 
 $route = $_SERVER["REQUEST_URI"];
 
-
-
 switch (strtok($route, "?")) {
     case '/login':
         login();
@@ -175,10 +175,10 @@ switch (strtok($route, "?")) {
         fbcallback();
         break;
     case '/twitch_oauth_success':
-        twcallback();
+        twCallback();
         break;
     case '/discord_oauth_success':
-        discordcallback();
+        discordCallback();
         break;
     default:
         http_response_code(404);
