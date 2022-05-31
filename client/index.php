@@ -47,7 +47,6 @@ function login()
         "redirect_uri"=> "https://localhost/discord_oauth_success",
         "state"=>bin2hex(random_bytes(16))
     ]);
-    doCurl()
     echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with Oauth-Server</a><br>";
     echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?{$fbQueryParams}\">Login with Facebook</a><br>";
     echo "<a href=\"https://id.twitch.tv/oauth2/authorize?{$twQueryParams}\">Login with Twitch</a><br>";
