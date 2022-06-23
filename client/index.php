@@ -122,30 +122,42 @@ function app_callback($app)
         case "fb":
             $token = getFbToken(FB_TOKEN_URL, FB_CLIENT_ID, FB_CLIENT_SECRET);
             $apiURL = FB_API_URL;
+            $headers = [
+                "Authorization: Bearer $token",
+            ];
             break;
         case "discord":
             $token = getDiscordToken(DISCORD_TOKEN_URL, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET);
             $apiURL = DISCORD_API_URL;
+            $headers = [
+                "Authorization: Bearer $token",
+            ];
             break;
         case "twitch":
             $token = getTwitchToken(TWITCH_TOKEN_URL, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET);
             $apiURL = TWITCH_API_URL;
+            $headers = [
+                "Authorization: Bearer $token",
+                "Client-ID: " . TWITCH_CLIENT_ID
+            ];
             break;
         default:
             return;
     }
-    $user = getUser($token, $apiURL);
+    $user = getUser($apiURL, $headers);
     var_dump($user);
 }
 
-function getUser($token, $apiURL) 
+function getUser($apiURL, $headers) 
 {
     $context = stream_context_create([
         "http"=>[
-            "header"=>"Authorization: Bearer {$token}"
+            "header"=>$headers,
         ]
     ]);
+    
     $response = file_get_contents($apiURL, false, $context);
+
     if (!$response) {
         var_dump($http_response_header);
         return;
@@ -241,6 +253,7 @@ function getTwitchToken($baseUrl, $clientId, $clientSecret)
         var_dump($http_response_header);
         return;
     }
+
 
     ["access_token" => $token] = json_decode($response, true);
     return $token;
