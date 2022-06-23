@@ -15,12 +15,19 @@ define("DISCORD_TOKEN_URL", "https://discordapp.com/api/v6/oauth2/token");
 define("DISCORD_API_URL", "https://discord.com/api/users/@me");
 define("DISCORD_REDIRECT_URL", "https://localhost/discord_oauth_success");
 
-
 define("TWITCH_CLIENT_ID", "tviv1pom889jjrvfcrq5bzc3km5qed");
 define("TWITCH_CLIENT_SECRET", "4vkcw6rix7dgylghlpgyt1dqmp346i");
 define("TWITCH_TOKEN_URL", "https://id.twitch.tv/oauth2/token");
 define("TWITCH_API_URL", "https://api.twitch.tv/helix/users");
 define("TWITCH_REDIRECT_URL", "https://localhost/twitch_oauth_success");
+
+define("GITHUB_CLIENT_ID", "a4dca4e9106e4fecde7f");
+define("GITHUB_CLIENT_SECRET", "3cc52ce3b00981b64fce5a5a11f80676076008d0");
+define("GITHUB_TOKEN_URL", "https://github.com/login/oauth/access_token");
+define("GITHUB_API_URL", "https://api.github.com/user");
+define("GITHUB_REDIRECT_URL", "https://localhost/github_oauth_success");
+
+
 
 
 // Create a login page with a link to oauth
@@ -63,10 +70,19 @@ function login()
         "redirect_uri"=> TWITCH_REDIRECT_URL,
     ]);
 
+    $githubQueryParams = http_build_query([
+        "state"=>bin2hex(random_bytes(16)),
+        "client_id"=> GITHUB_CLIENT_ID,
+        "scope"=>"user",
+        // "response_type" => "code",
+        "redirect_uri"=> GITHUB_REDIRECT_URL,
+    ]);
+
     echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with Oauth-Server</a><br>";
     echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?{$fbQueryParams}\">Login with Facebook</a><br>";
     echo "<a href=\"https://discord.com/api/oauth2/authorize?{$discordQueryParams}\">Login with Discord</a><br>";
     echo "<a href=\"https://id.twitch.tv/oauth2/authorize?{$twitchQueryParams}\">Login with Twitch</a><br>";
+    echo "<a href=\"https://github.com/login/oauth/authorize?{$githubQueryParams}\">Login with Github</a><br>";
 
 }
 
@@ -141,6 +157,12 @@ function app_callback($app)
                 "Client-ID: " . TWITCH_CLIENT_ID
             ];
             break;
+        case "github":
+            $token = getGithubToken(GITHUB_TOKEN_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET);
+            $apiURL = GITHUB_API_URL;
+            $headers = [
+                "Authorization: token $token",
+            ];
         default:
             return;
     }
@@ -162,6 +184,7 @@ function getUser($apiURL, $headers)
         var_dump($http_response_header);
         return;
     }
+
     return json_decode($response, true);
 }
 
@@ -219,7 +242,6 @@ function getDiscordToken($baseUrl, $clientId, $clientSecret)
     }
 
     ["access_token" => $token] = json_decode($response, true);
-
     return $token;
 }
 
@@ -244,7 +266,6 @@ function getTwitchToken($baseUrl, $clientId, $clientSecret)
         )
     );
 
-
     $context  = stream_context_create($opts);
     $response = file_get_contents($baseUrl, false, $context);
 
@@ -254,8 +275,45 @@ function getTwitchToken($baseUrl, $clientId, $clientSecret)
         return;
     }
 
+    ["access_token" => $token] = json_decode($response, true);
+    return $token;
+}
+
+function getGithubToken($baseUrl, $clientId, $clientSecret)
+{
+    ["code"=> $code, "state" => $state] = $_GET;
+    $postData = http_build_query(
+        array(
+            "client_id"=> $clientId,
+            "client_secret"=> $clientSecret,
+            "redirect_uri"=> GITHUB_REDIRECT_URL,
+            "code"=> $code,
+            // "grant_type"=>"authorization_code",
+        )
+    );
+
+    $opts = array('http' =>
+        array(
+            'method'  => 'POST',
+            'header' => 'Content-Type: application/x-www-form-urlencoded',
+            'content' => $postData,
+        )
+    );
+
+    $context  = stream_context_create($opts);
+    $response = file_get_contents($baseUrl, false, $context);
+
+    if (!$response) {
+        var_dump($http_response_header);
+        return;
+    }
 
     ["access_token" => $token] = json_decode($response, true);
+    parse_str( $response, $output );
+    $result = json_encode($output);
+    echo $result;
+    die();
+
     return $token;
 }
 
@@ -276,6 +334,9 @@ switch (strtok($route, "?")) {
         break;
     case '/twitch_oauth_success':
         app_callback("twitch");
+        break;
+    case '/github_oauth_success':
+        app_callback("github");
         break;
     default:
         http_response_code(404);
