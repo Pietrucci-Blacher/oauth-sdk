@@ -74,7 +74,6 @@ function login()
         "state"=>bin2hex(random_bytes(16)),
         "client_id"=> GITHUB_CLIENT_ID,
         "scope"=>"user",
-        // "response_type" => "code",
         "redirect_uri"=> GITHUB_REDIRECT_URL,
     ]);
 
@@ -162,10 +161,13 @@ function app_callback($app)
             $apiURL = GITHUB_API_URL;
             $headers = [
                 "Authorization: token $token",
+                "User-Agent: benjaminli7"
             ];
+            break;
         default:
             return;
     }
+
     $user = getUser($apiURL, $headers);
     var_dump($user);
 }
@@ -177,9 +179,8 @@ function getUser($apiURL, $headers)
             "header"=>$headers,
         ]
     ]);
-    
-    $response = file_get_contents($apiURL, false, $context);
 
+    $response = file_get_contents($apiURL, false, $context);
     if (!$response) {
         var_dump($http_response_header);
         return;
@@ -288,14 +289,16 @@ function getGithubToken($baseUrl, $clientId, $clientSecret)
             "client_secret"=> $clientSecret,
             "redirect_uri"=> GITHUB_REDIRECT_URL,
             "code"=> $code,
-            // "grant_type"=>"authorization_code",
+            "grant_type"=>"authorization_code",
         )
     );
 
     $opts = array('http' =>
         array(
             'method'  => 'POST',
-            'header' => 'Content-Type: application/x-www-form-urlencoded',
+            'header' => [
+                'Content-Type: application/x-www-form-urlencoded',
+            ],
             'content' => $postData,
         )
     );
@@ -308,12 +311,10 @@ function getGithubToken($baseUrl, $clientId, $clientSecret)
         return;
     }
 
-    ["access_token" => $token] = json_decode($response, true);
+
     parse_str( $response, $output );
     $result = json_encode($output);
-    echo $result;
-    die();
-
+    ["access_token" => $token] = json_decode($result, true);
     return $token;
 }
 
