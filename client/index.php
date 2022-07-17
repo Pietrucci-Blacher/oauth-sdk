@@ -128,7 +128,6 @@ function callback()
         echo $http_response_header;
         return;
     }
-    var_dump(json_decode($response, true));
 }
 
 function app_callback($app)
@@ -169,7 +168,22 @@ function app_callback($app)
     }
 
     $user = getUser($apiURL, $headers);
-    var_dump($user);
+    switch($apiURL) {
+        case FB_API_URL:
+            echo "Hello {$user['last_name']} {$user['first_name']}";
+            break;
+        case DISCORD_API_URL:
+            echo "Hello {$user['username']}";
+            break;
+        case TWITCH_API_URL:
+            echo "Hello {$user['data'][0]['login']}";
+            break;
+        case GITHUB_API_URL:
+            echo "Hello {$user['login']}";
+            break;
+        default:
+            return;
+    }
     
 }
 
