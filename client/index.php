@@ -1,13 +1,34 @@
 <?php
 
-const CLIENT_ID = '67dc2be521bec2ff862d3ab057de216b';
-const CLIENT_SECRET = 'cf519bc17340aa347774be36443cdbf1';
-const FB_CLIENT_ID = '651128429478820';
-const FB_CLIENT_SECRET = '02f2ab1a9c018c523282015c3cb2a468';
-const TW_CLIENT_ID = "s77c4qdvjygkwni85rsdj1k48nsy7l";
-const TW_CLIENT_SECRET = "qgujena6pclcra5i2s4clmuafbc1vl";
-const DISCORD_CLIENT_ID = "980825470713069598";
-const DISCORD_CLIENT_SECRET = "HUkrGaLwXoqVuWf_9UwET__a73WYLoIj";
+define("CLIENT_ID", '67dc2be521bec2ff862d3ab057de216b');
+define("CLIENT_SECRET", '04054cf433eeb3976252c81b6d657fda');
+
+define("FB_CLIENT_ID", '350564083472357');
+define("FB_CLIENT_SECRET", '33061052c98835fbcbfee7009dd9862c');
+define("FB_TOKEN_URL", "https://graph.facebook.com/v13.0/oauth/access_token");
+define("FB_API_URL", "https://graph.facebook.com/v13.0/me?fields=last_name,first_name,email");
+define("FB_REDIRECT_URL", "https://localhost/fb_oauth_success");
+
+define("DISCORD_CLIENT_ID", "989090035972317264");
+define("DISCORD_CLIENT_SECRET", "8T4sYLQGBtcWFlIvEDlQBc30mKpcOTII");
+define("DISCORD_TOKEN_URL", "https://discordapp.com/api/v6/oauth2/token");
+define("DISCORD_API_URL", "https://discord.com/api/users/@me");
+define("DISCORD_REDIRECT_URL", "https://localhost/discord_oauth_success");
+
+define("TWITCH_CLIENT_ID", "tviv1pom889jjrvfcrq5bzc3km5qed");
+define("TWITCH_CLIENT_SECRET", "4vkcw6rix7dgylghlpgyt1dqmp346i");
+define("TWITCH_TOKEN_URL", "https://id.twitch.tv/oauth2/token");
+define("TWITCH_API_URL", "https://api.twitch.tv/helix/users");
+define("TWITCH_REDIRECT_URL", "https://localhost/twitch_oauth_success");
+
+define("GITHUB_CLIENT_ID", "a4dca4e9106e4fecde7f");
+define("GITHUB_CLIENT_SECRET", "3cc52ce3b00981b64fce5a5a11f80676076008d0");
+define("GITHUB_TOKEN_URL", "https://github.com/login/oauth/access_token");
+define("GITHUB_API_URL", "https://api.github.com/user");
+define("GITHUB_REDIRECT_URL", "https://localhost/github_oauth_success");
+
+
+
 
 // Create a login page with a link to oauth
 function login()
@@ -30,27 +51,38 @@ function login()
         "state"=>bin2hex(random_bytes(16)),
         "client_id"=> FB_CLIENT_ID,
         "scope"=>"public_profile,email",
-        "redirect_uri"=>"https://localhost/fb_oauth_success",
+        "redirect_uri"=> FB_REDIRECT_URL,
     ]);
 
-    $twQueryParams = http_build_query([
-        "client_id" => TW_CLIENT_ID,
-        "scope" => "user:read:email",
-        "redirect_uri"=>"https://localhost/twitch_oauth_success",
-        "response_type" => "code",
-        "state"=>bin2hex(random_bytes(16))
-    ]);
     $discordQueryParams = http_build_query([
-        "client_id" => DISCORD_CLIENT_ID,
-        "scope"=>"email",
-        "response_type" => "token",
-        "redirect_uri"=> "https://localhost/discord_oauth_success",
-        "state"=>bin2hex(random_bytes(16))
+        "state"=>bin2hex(random_bytes(16)),
+        "client_id"=> DISCORD_CLIENT_ID,
+        "scope"=>"identify",
+        "response_type" => "code",
+        "redirect_uri"=> DISCORD_REDIRECT_URL,
     ]);
+
+    $twitchQueryParams = http_build_query([
+        "state"=>bin2hex(random_bytes(16)),
+        "client_id"=> TWITCH_CLIENT_ID,
+        "scope"=>"user:read:email",
+        "response_type" => "code",
+        "redirect_uri"=> TWITCH_REDIRECT_URL,
+    ]);
+
+    $githubQueryParams = http_build_query([
+        "state"=>bin2hex(random_bytes(16)),
+        "client_id"=> GITHUB_CLIENT_ID,
+        "scope"=>"user",
+        "redirect_uri"=> GITHUB_REDIRECT_URL,
+    ]);
+
     echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with Oauth-Server</a><br>";
     echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?{$fbQueryParams}\">Login with Facebook</a><br>";
-    echo "<a href=\"https://id.twitch.tv/oauth2/authorize?{$twQueryParams}\">Login with Twitch</a><br>";
-    echo "<a href=\"https://discord.com/api/oauth2/authorize?{$discordQueryParams}\">Login with Discord</a>";
+    echo "<a href=\"https://discord.com/api/oauth2/authorize?{$discordQueryParams}\">Login with Discord</a><br>";
+    echo "<a href=\"https://id.twitch.tv/oauth2/authorize?{$twitchQueryParams}\">Login with Twitch</a><br>";
+    echo "<a href=\"https://github.com/login/oauth/authorize?{$githubQueryParams}\">Login with Github</a><br>";
+
 }
 
 // get token from code then get user info
@@ -99,74 +131,80 @@ function callback()
     var_dump(json_decode($response, true));
 }
 
-// Facebook oauth: exchange code with token then get user info
-function fbcallback()
+function app_callback($app)
 {
-    $token = getToken("https://graph.facebook.com/v13.0/oauth/access_token", FB_CLIENT_ID, FB_CLIENT_SECRET, "https://localhost/fb_oauth_success");
-    $user = getFbUser($token);
-    $unifiedUser = (fn () => [
-        "id" => $user["id"],
-        "name" => $user["name"],
-        "email" => $user["email"],
-        "firstName" => $user['first_name'],
-        "lastName" => $user['last_name'],
-    ])();
-    var_dump($unifiedUser);
+    switch($app) {
+        case "fb":
+            $token = getFbToken(FB_TOKEN_URL, FB_CLIENT_ID, FB_CLIENT_SECRET);
+            $apiURL = FB_API_URL;
+            $headers = [
+                "Authorization: Bearer $token",
+            ];
+            break;
+        case "discord":
+            $token = getDiscordToken(DISCORD_TOKEN_URL, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET);
+            $apiURL = DISCORD_API_URL;
+            $headers = [
+                "Authorization: Bearer $token",
+            ];
+            break;
+        case "twitch":
+            $token = getTwitchToken(TWITCH_TOKEN_URL, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET);
+            $apiURL = TWITCH_API_URL;
+            $headers = [
+                "Authorization: Bearer $token",
+                "Client-ID: " . TWITCH_CLIENT_ID
+            ];
+            break;
+        case "github":
+            $token = getGithubToken(GITHUB_TOKEN_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET);
+            $apiURL = GITHUB_API_URL;
+            $headers = [
+                "Authorization: token $token",
+                "User-Agent: benjaminli7"
+            ];
+            break;
+        default:
+            return;
+    }
+
+    $user = getUser($apiURL, $headers);
+    var_dump($user);
 }
-function getFbUser($token)
+
+function getUser($apiURL, $headers) 
 {
     $context = stream_context_create([
         "http"=>[
-            "header"=>"Authorization: Bearer {$token}"
+            "header"=>$headers,
         ]
     ]);
-    $response = file_get_contents("https://graph.facebook.com/v13.0/me?fields=last_name,first_name,email", false, $context);
+
+    $response = file_get_contents($apiURL, false, $context);
     if (!$response) {
-        echo $http_response_header;
+        var_dump($http_response_header);
         return;
     }
+
     return json_decode($response, true);
 }
 
-function twCallback():void
-{
-    $token = getToken("https://id.twitch.tv/oauth2/token", TW_CLIENT_ID, TW_CLIENT_SECRET, "https://localhost/twitch_oauth_success");
-}
-
-function discordCallback(): void
-{
-    $token = getToken("https://discord.com/api/oauth2/token", DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, "https://localhost/discord_oauth_success");
-    var_dump($token);
-}
-
-
-function getTokenFb($baseUrl, $clientId, $clientSecret, $redirect_uri)
+function getFbToken($baseUrl, $clientId, $clientSecret)
 {
     ["code"=> $code, "state" => $state] = $_GET;
-    print_r($_GET);
     $queryParams = http_build_query([
         "client_id"=> $clientId,
         "client_secret"=> $clientSecret,
-        "redirect_uri"=> $redirect_uri,
+        "redirect_uri"=> FB_REDIRECT_URL,
         "code"=> $code,
-        "grant_type"=>"authorization_code"
+        "grant_type"=>"authorization_code",
     ]);
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $baseUrl);
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch,CURLOPT_POSTFIELDS, $queryParams);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
 
-    $response = curl_exec($ch);
-    print_r($response);
-    curl_close($ch);
-
-    //$response = file_get_contents($url);
+    $url = $baseUrl . "?{$queryParams}";
+    $response = file_get_contents($url);
 
     if (!$response) {
-        echo $http_response_header;
+        var_dump($http_response_header);
         return;
     }
     ["access_token" => $token] = json_decode($response, true);
@@ -174,8 +212,114 @@ function getTokenFb($baseUrl, $clientId, $clientSecret, $redirect_uri)
     return $token;
 }
 
-$route = $_SERVER["REQUEST_URI"];
+function getDiscordToken($baseUrl, $clientId, $clientSecret)
+{
+    ["code"=> $code, "state" => $state] = $_GET;
 
+    $postData = http_build_query(
+        array(
+            "client_id"=> $clientId,
+            "client_secret"=> $clientSecret,
+            "redirect_uri"=> DISCORD_REDIRECT_URL,
+            "code"=> $code,
+            "grant_type"=>"authorization_code",
+        )
+    );
+
+    $opts = array('http' =>
+        array(
+            'method'  => 'POST',
+            'header' => 'Content-Type: application/x-www-form-urlencoded',
+            'content' => $postData,
+        )
+    );
+
+    $context  = stream_context_create($opts);
+    $response = file_get_contents($baseUrl, false, $context);
+
+    if (!$response) {
+        var_dump($http_response_header);
+        return;
+    }
+
+    ["access_token" => $token] = json_decode($response, true);
+    return $token;
+}
+
+function getTwitchToken($baseUrl, $clientId, $clientSecret)
+{
+    ["code"=> $code, "state" => $state] = $_GET;
+    $postData = http_build_query(
+        array(
+            "client_id"=> $clientId,
+            "client_secret"=> $clientSecret,
+            "redirect_uri"=> TWITCH_REDIRECT_URL,
+            "code"=> $code,
+            "grant_type"=>"authorization_code",
+        )
+    );
+
+    $opts = array('http' =>
+        array(
+            'method'  => 'POST',
+            'header' => 'Content-Type: application/x-www-form-urlencoded',
+            'content' => $postData,
+        )
+    );
+
+    $context  = stream_context_create($opts);
+    $response = file_get_contents($baseUrl, false, $context);
+
+    if (!$response) {
+        
+        var_dump($http_response_header);
+        return;
+    }
+
+    ["access_token" => $token] = json_decode($response, true);
+    return $token;
+}
+
+function getGithubToken($baseUrl, $clientId, $clientSecret)
+{
+    ["code"=> $code, "state" => $state] = $_GET;
+    $postData = http_build_query(
+        array(
+            "client_id"=> $clientId,
+            "client_secret"=> $clientSecret,
+            "redirect_uri"=> GITHUB_REDIRECT_URL,
+            "code"=> $code,
+            "grant_type"=>"authorization_code",
+        )
+    );
+
+    $opts = array('http' =>
+        array(
+            'method'  => 'POST',
+            'header' => [
+                'Content-Type: application/x-www-form-urlencoded',
+            ],
+            'content' => $postData,
+        )
+    );
+
+    $context  = stream_context_create($opts);
+    $response = file_get_contents($baseUrl, false, $context);
+
+    if (!$response) {
+        var_dump($http_response_header);
+        return;
+    }
+
+
+    parse_str( $response, $output );
+    $result = json_encode($output);
+    ["access_token" => $token] = json_decode($result, true);
+    return $token;
+}
+
+
+$route = $_SERVER["REQUEST_URI"];
 switch (strtok($route, "?")) {
     case '/login':
         login();
@@ -184,13 +328,16 @@ switch (strtok($route, "?")) {
         callback();
         break;
     case '/fb_oauth_success':
-        fbcallback();
-        break;
-    case '/twitch_oauth_success':
-        twCallback();
+        app_callback("fb");
         break;
     case '/discord_oauth_success':
-        discordCallback();
+        app_callback("discord");
+        break;
+    case '/twitch_oauth_success':
+        app_callback("twitch");
+        break;
+    case '/github_oauth_success':
+        app_callback("github");
         break;
     default:
         http_response_code(404);
