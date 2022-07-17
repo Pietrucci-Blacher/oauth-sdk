@@ -142,14 +142,14 @@ function app_callback($app)
             ];
             break;
         case "discord":
-            $token = getDiscordToken(DISCORD_TOKEN_URL, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET);
+            $token = getToken(DISCORD_TOKEN_URL, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URL);
             $apiURL = DISCORD_API_URL;
             $headers = [
                 "Authorization: Bearer $token",
             ];
             break;
         case "twitch":
-            $token = getTwitchToken(TWITCH_TOKEN_URL, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET);
+            $token = getToken(TWITCH_TOKEN_URL, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, TWITCH_REDIRECT_URL);
             $apiURL = TWITCH_API_URL;
             $headers = [
                 "Authorization: Bearer $token",
@@ -157,7 +157,7 @@ function app_callback($app)
             ];
             break;
         case "github":
-            $token = getGithubToken(GITHUB_TOKEN_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET);
+            $token = getToken(GITHUB_TOKEN_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URL);
             $apiURL = GITHUB_API_URL;
             $headers = [
                 "Authorization: token $token",
@@ -170,6 +170,7 @@ function app_callback($app)
 
     $user = getUser($apiURL, $headers);
     var_dump($user);
+    
 }
 
 function getUser($apiURL, $headers) 
@@ -182,11 +183,50 @@ function getUser($apiURL, $headers)
 
     $response = file_get_contents($apiURL, false, $context);
     if (!$response) {
-        var_dump($http_response_header);
         return;
     }
 
     return json_decode($response, true);
+}
+
+// discord, twitch, 
+function getToken($baseUrl, $clientId, $clientSecret, $redirect) {
+    ["code"=> $code, "state" => $state] = $_GET;
+
+    $postData = http_build_query(
+        array(
+            "client_id"=> $clientId,
+            "client_secret"=> $clientSecret,
+            "redirect_uri"=> $redirect,
+            "code"=> $code,
+            "grant_type"=>"authorization_code",
+        )
+    );
+
+    $opts = array('http' =>
+        array(
+            'method'  => 'POST',
+            'header' => 'Content-Type: application/x-www-form-urlencoded',
+            'content' => $postData,
+        )
+    );
+
+    $context  = stream_context_create($opts);
+    $response = file_get_contents($baseUrl, false, $context);
+
+    if (!$response) {
+        return;
+    }
+
+    if($redirect == GITHUB_REDIRECT_URL) {
+        parse_str( $response, $output );
+        $result = json_encode($output);
+        ["access_token" => $token] = json_decode($result, true);
+        return $token;
+    }
+
+    ["access_token" => $token] = json_decode($response, true);
+    return $token;
 }
 
 function getFbToken($baseUrl, $clientId, $clientSecret)
@@ -204,120 +244,12 @@ function getFbToken($baseUrl, $clientId, $clientSecret)
     $response = file_get_contents($url);
 
     if (!$response) {
-        var_dump($http_response_header);
         return;
     }
     ["access_token" => $token] = json_decode($response, true);
 
     return $token;
 }
-
-function getDiscordToken($baseUrl, $clientId, $clientSecret)
-{
-    ["code"=> $code, "state" => $state] = $_GET;
-
-    $postData = http_build_query(
-        array(
-            "client_id"=> $clientId,
-            "client_secret"=> $clientSecret,
-            "redirect_uri"=> DISCORD_REDIRECT_URL,
-            "code"=> $code,
-            "grant_type"=>"authorization_code",
-        )
-    );
-
-    $opts = array('http' =>
-        array(
-            'method'  => 'POST',
-            'header' => 'Content-Type: application/x-www-form-urlencoded',
-            'content' => $postData,
-        )
-    );
-
-    $context  = stream_context_create($opts);
-    $response = file_get_contents($baseUrl, false, $context);
-
-    if (!$response) {
-        var_dump($http_response_header);
-        return;
-    }
-
-    ["access_token" => $token] = json_decode($response, true);
-    return $token;
-}
-
-function getTwitchToken($baseUrl, $clientId, $clientSecret)
-{
-    ["code"=> $code, "state" => $state] = $_GET;
-    $postData = http_build_query(
-        array(
-            "client_id"=> $clientId,
-            "client_secret"=> $clientSecret,
-            "redirect_uri"=> TWITCH_REDIRECT_URL,
-            "code"=> $code,
-            "grant_type"=>"authorization_code",
-        )
-    );
-
-    $opts = array('http' =>
-        array(
-            'method'  => 'POST',
-            'header' => 'Content-Type: application/x-www-form-urlencoded',
-            'content' => $postData,
-        )
-    );
-
-    $context  = stream_context_create($opts);
-    $response = file_get_contents($baseUrl, false, $context);
-
-    if (!$response) {
-        
-        var_dump($http_response_header);
-        return;
-    }
-
-    ["access_token" => $token] = json_decode($response, true);
-    return $token;
-}
-
-function getGithubToken($baseUrl, $clientId, $clientSecret)
-{
-    ["code"=> $code, "state" => $state] = $_GET;
-    $postData = http_build_query(
-        array(
-            "client_id"=> $clientId,
-            "client_secret"=> $clientSecret,
-            "redirect_uri"=> GITHUB_REDIRECT_URL,
-            "code"=> $code,
-            "grant_type"=>"authorization_code",
-        )
-    );
-
-    $opts = array('http' =>
-        array(
-            'method'  => 'POST',
-            'header' => [
-                'Content-Type: application/x-www-form-urlencoded',
-            ],
-            'content' => $postData,
-        )
-    );
-
-    $context  = stream_context_create($opts);
-    $response = file_get_contents($baseUrl, false, $context);
-
-    if (!$response) {
-        var_dump($http_response_header);
-        return;
-    }
-
-
-    parse_str( $response, $output );
-    $result = json_encode($output);
-    ["access_token" => $token] = json_decode($result, true);
-    return $token;
-}
-
 
 $route = $_SERVER["REQUEST_URI"];
 switch (strtok($route, "?")) {
