@@ -10,9 +10,9 @@ services:
     command: [ "php", "-S", "0.0.0.0:8080" ]
 
   client:
-    build: ./client
+    build: src/client
     volumes:
-      - ./client:/home/root
+      - ./src/client:/home/root
     working_dir: /home/root
     ports:
       - "127.0.0.1:8081:80"
