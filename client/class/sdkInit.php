@@ -1,10 +1,11 @@
 <?php
+
 namespace SDK;
+
 class sdkInit
 {
     public function __construct()
     {
-
     }
 
     private const CLIENT_ID = '67dc2be521bec2ff862d3ab057de216b';
@@ -37,16 +38,15 @@ class sdkInit
 
 
 
-// Create a login page with a link to oauth
+    // Create a login page with a link to oauth
     public function login(): void
     {
-        
         $queryParams = http_build_query([
-            "state"=>bin2hex(random_bytes(16)),
-            "client_id"=> self::CLIENT_ID,
-            "scope"=>"profile",
-            "response_type"=>"code",
-            "redirect_uri"=>"http://localhost:8081/oauth_success",
+            "state" => bin2hex(random_bytes(16)),
+            "client_id" => self::CLIENT_ID,
+            "scope" => "profile",
+            "response_type" => "code",
+            "redirect_uri" => "http://localhost:8081/oauth_success",
         ]);
         echo "
         <form method=\"POST\" action=\"/oauth_success\">
@@ -56,55 +56,54 @@ class sdkInit
         </form>
     ";
         $fbQueryParams = http_build_query([
-            "state"=>bin2hex(random_bytes(16)),
-            "client_id"=> self::FB_CLIENT_ID,
-            "scope"=>"public_profile,email",
-            "redirect_uri"=> self::FB_REDIRECT_URL,
+            "state" => bin2hex(random_bytes(16)),
+            "client_id" => self::FB_CLIENT_ID,
+            "scope" => "public_profile,email",
+            "redirect_uri" => self::FB_REDIRECT_URL,
         ]);
 
         $discordQueryParams = http_build_query([
-            "state"=>bin2hex(random_bytes(16)),
-            "client_id"=> self::DISCORD_CLIENT_ID,
-            "scope"=>"identify",
+            "state" => bin2hex(random_bytes(16)),
+            "client_id" => self::DISCORD_CLIENT_ID,
+            "scope" => "identify",
             "response_type" => "code",
-            "redirect_uri"=> self::DISCORD_REDIRECT_URL,
+            "redirect_uri" => self::DISCORD_REDIRECT_URL,
         ]);
 
         $twitchQueryParams = http_build_query([
-            "state"=>bin2hex(random_bytes(16)),
-            "client_id"=> self::TWITCH_CLIENT_ID,
-            "scope"=>"user:read:email",
+            "state" => bin2hex(random_bytes(16)),
+            "client_id" => self::TWITCH_CLIENT_ID,
+            "scope" => "user:read:email",
             "response_type" => "code",
-            "redirect_uri"=> self::TWITCH_REDIRECT_URL,
+            "redirect_uri" => self::TWITCH_REDIRECT_URL,
         ]);
 
         $githubQueryParams = http_build_query([
-            "state"=>bin2hex(random_bytes(16)),
-            "client_id"=> self::GITHUB_CLIENT_ID,
-            "scope"=>"user",
-            "redirect_uri"=> self::GITHUB_REDIRECT_URL,
+            "state" => bin2hex(random_bytes(16)),
+            "client_id" => self::GITHUB_CLIENT_ID,
+            "scope" => "user",
+            "redirect_uri" => self::GITHUB_REDIRECT_URL,
         ]);
 
-        echo "<a href=\"http://localhost:8080/auth?$queryParams\">Login with Oauth-Server</a><br>";
-        echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?$fbQueryParams\">Login with Facebook</a><br>";
-        echo "<a href=\"https://discord.com/api/oauth2/authorize?$discordQueryParams\">Login with Discord</a><br>";
-        echo "<a href=\"https://id.twitch.tv/oauth2/authorize?$twitchQueryParams\">Login with Twitch</a><br>";
-        echo "<a href=\"https://github.com/login/oauth/authorize?$githubQueryParams\">Login with Github</a><br>";
-
+        echo "<a href=\"http://localhost:8080/auth?{$queryParams}\">Login with Oauth-Server</a><br>";
+        echo "<a href=\"https://www.facebook.com/v13.0/dialog/oauth?{$fbQueryParams}\">Login with Facebook</a><br>";
+        echo "<a href=\"https://discord.com/api/oauth2/authorize?{$discordQueryParams}\">Login with Discord</a><br>";
+        echo "<a href=\"https://id.twitch.tv/oauth2/authorize?{$twitchQueryParams}\">Login with Twitch</a><br>";
+        echo "<a href=\"https://github.com/login/oauth/authorize?{$githubQueryParams}\">Login with Github</a><br>";
     }
 
-// get token from code then get user info
-    function callback()
+    // get token from code then get user info
+    public function callback()
     {
         if ($_SERVER["REQUEST_METHOD"] === "POST") {
-            ["username"=> $username, "password" => $password] = $_POST;
+            ["username" => $username, "password" => $password] = $_POST;
             $specifParams = [
                 "grant_type" => "password",
                 "username" => $username,
                 "password" => $password,
             ];
         } else {
-            ["code"=> $code, "state" => $state] = $_GET;
+            ["code" => $code, "state" => $state] = $_GET;
             $specifParams = [
                 "grant_type" => "authorization_code",
                 "code" => $code
@@ -127,8 +126,8 @@ class sdkInit
 
 
         $context = stream_context_create([
-            "http"=>[
-                "header"=>"Authorization: Bearer {$token}"
+            "http" => [
+                "header" => "Authorization: Bearer {$token}"
             ]
         ]);
         $response = file_get_contents("http://server:8080/me", false, $context);
@@ -136,12 +135,13 @@ class sdkInit
             echo $http_response_header;
             return;
         }
-        var_dump(json_decode($response, true));
+        $response = json_decode($response, true);
+        echo "Hello {$response["username"]}";
     }
 
     public function app_callback($app)
     {
-        switch($app) {
+        switch ($app) {
             case "fb":
                 $token = $this->getFbToken(self::FB_TOKEN_URL, self::FB_CLIENT_ID, self::FB_CLIENT_SECRET);
                 $apiURL = self::FB_API_URL;
@@ -150,14 +150,14 @@ class sdkInit
                 ];
                 break;
             case "discord":
-                $token = $this->getDiscordToken(self::DISCORD_TOKEN_URL, self::DISCORD_CLIENT_ID, self::DISCORD_CLIENT_SECRET);
+                $token = $this->getToken(self::DISCORD_TOKEN_URL, self::DISCORD_CLIENT_ID, self::DISCORD_CLIENT_SECRET, self::DISCORD_REDIRECT_URL);
                 $apiURL = self::DISCORD_API_URL;
                 $headers = [
                     "Authorization: Bearer $token",
                 ];
                 break;
             case "twitch":
-                $token = $this->getTwitchToken(self::TWITCH_TOKEN_URL, self::TWITCH_CLIENT_ID, self::TWITCH_CLIENT_SECRET);
+                $token = $this->getToken(self::TWITCH_TOKEN_URL, self::TWITCH_CLIENT_ID, self::TWITCH_CLIENT_SECRET, self::TWITCH_REDIRECT_URL);
                 $apiURL = self::TWITCH_API_URL;
                 $headers = [
                     "Authorization: Bearer $token",
@@ -165,7 +165,7 @@ class sdkInit
                 ];
                 break;
             case "github":
-                $token = $this->getGithubToken(self::GITHUB_TOKEN_URL, self::GITHUB_CLIENT_ID, self::GITHUB_CLIENT_SECRET);
+                $token = $this->getToken(self::GITHUB_TOKEN_URL, self::GITHUB_CLIENT_ID, self::GITHUB_CLIENT_SECRET, self::GITHUB_REDIRECT_URL);
                 $apiURL = self::GITHUB_API_URL;
                 $headers = [
                     "Authorization: token $token",
@@ -177,14 +177,29 @@ class sdkInit
         }
 
         $user = $this->getUser($apiURL, $headers);
-        var_dump($user);
+        switch ($apiURL) {
+            case self::FB_API_URL:
+                echo "Hello {$user['last_name']} {$user['first_name']}";
+                break;
+            case self::DISCORD_API_URL:
+                echo "Hello {$user['username']}";
+                break;
+            case self::TWITCH_API_URL:
+                echo "Hello {$user['data'][0]['login']}";
+                break;
+            case self::GITHUB_API_URL:
+                echo "Hello {$user['login']}";
+                break;
+            default:
+                return;
+        }
     }
 
     public function getUser($apiURL, $headers)
     {
         $context = stream_context_create([
-            "http"=>[
-                "header"=>$headers,
+            "http" => [
+                "header" => $headers,
             ]
         ]);
 
@@ -199,13 +214,13 @@ class sdkInit
 
     public function getFbToken($baseUrl, $clientId, $clientSecret)
     {
-        ["code"=> $code, "state" => $state] = $_GET;
+        ["code" => $code, "state" => $state] = $_GET;
         $queryParams = http_build_query([
-            "client_id"=> $clientId,
-            "client_secret"=> $clientSecret,
-            "redirect_uri"=> self::FB_REDIRECT_URL,
-            "code"=> $code,
-            "grant_type"=>"authorization_code",
+            "client_id" => $clientId,
+            "client_secret" => $clientSecret,
+            "redirect_uri" => self::FB_REDIRECT_URL,
+            "code" => $code,
+            "grant_type" => "authorization_code",
         ]);
 
         $url = $baseUrl . "?{$queryParams}";
@@ -220,108 +235,44 @@ class sdkInit
         return $token;
     }
 
-    public function getDiscordToken($baseUrl, $clientId, $clientSecret)
+    public function getToken($baseUrl, $clientId, $clientSecret, $redirect)
     {
-        ["code"=> $code, "state" => $state] = $_GET;
+        ["code" => $code, "state" => $state] = $_GET;
 
         $postData = http_build_query(
-            [
-                "client_id"=> $clientId,
-                "client_secret"=> $clientSecret,
-                "redirect_uri"=> self::DISCORD_REDIRECT_URL,
-                "code"=> $code,
-                "grant_type"=>"authorization_code",
-            ]
+            array(
+                "client_id" => $clientId,
+                "client_secret" => $clientSecret,
+                "redirect_uri" => $redirect,
+                "code" => $code,
+                "grant_type" => "authorization_code",
+            )
         );
 
-        $opts = ['http' =>
-            [
+        $opts = array(
+            'http' =>
+            array(
                 'method'  => 'POST',
                 'header' => 'Content-Type: application/x-www-form-urlencoded',
                 'content' => $postData,
-            ]
-        ];
-
-        $context  = stream_context_create($opts);
-        $response = file_get_contents($baseUrl, false, $context);
-
-        if (!$response) {
-            var_dump($http_response_header);
-            return;
-        }
-
-        ["access_token" => $token] = json_decode($response, true);
-        return $token;
-    }
-
-    function getTwitchToken($baseUrl, $clientId, $clientSecret)
-    {
-        ["code"=> $code, "state" => $state] = $_GET;
-        $postData = http_build_query(
-            [
-                "client_id"=> $clientId,
-                "client_secret"=> $clientSecret,
-                "redirect_uri"=> self::TWITCH_REDIRECT_URL,
-                "code"=> $code,
-                "grant_type"=>"authorization_code"
-        ]);
-
-        $opts = ['http' =>
-            [
-                'method'  => 'POST',
-                'header' => 'Content-Type: application/x-www-form-urlencoded',
-                'content' => $postData
-            ]
-        ];
-
-        $context  = stream_context_create($opts);
-        $response = file_get_contents($baseUrl, false, $context);
-
-        if (!$response) {
-
-            var_dump($http_response_header);
-            return;
-        }
-
-        ["access_token" => $token] = json_decode($response, true);
-        return $token;
-    }
-
-    public function getGithubToken($baseUrl, $clientId, $clientSecret)
-    {
-        ["code"=> $code, "state" => $state] = $_GET;
-        $postData = http_build_query(
-            [
-                "client_id"=> $clientId,
-                "client_secret"=> $clientSecret,
-                "redirect_uri"=> self::GITHUB_REDIRECT_URL,
-                "code"=> $code,
-                "grant_type"=>"authorization_code",
-            ]
+            )
         );
 
-        $opts = ['http' =>
-            [
-                'method'  => 'POST',
-                'header' => [
-                    'Content-Type: application/x-www-form-urlencoded',
-                ],
-                'content' => $postData,
-            ]
-        ];
-
         $context  = stream_context_create($opts);
         $response = file_get_contents($baseUrl, false, $context);
 
         if (!$response) {
-            var_dump($http_response_header);
             return;
         }
 
+        if ($redirect == self::GITHUB_REDIRECT_URL) {
+            parse_str($response, $output);
+            $result = json_encode($output);
+            ["access_token" => $token] = json_decode($result, true);
+            return $token;
+        }
 
-        parse_str( $response, $output );
-        $result = json_encode($output);
-        ["access_token" => $token] = json_decode($result, true);
+        ["access_token" => $token] = json_decode($response, true);
         return $token;
     }
 }
